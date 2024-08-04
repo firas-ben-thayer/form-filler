@@ -104,11 +104,11 @@
                   <h5>Final Review</h5>
                   <p>Please review your information and submit the form.</p>
                   <div>
-                    <a href="{{ url_for('forms_blueprint.submit_form', step=current_step-1) }}" class="btn btn-secondary">Previous</a>
                     <form method="post" action="{{ url_for('forms_blueprint.submit_form', step=current_step) }}">
                       {{ form.hidden_tag() }}
                       <div class="text-center">
-                        <button type="submit" class="btn btn-primary">Submit Form</button>
+                        <a href="{{ url_for('forms_blueprint.submit_form', step=current_step-1) }}" class="btn btn-secondary">Previous</a>
+                        <button type="submit" class="btn btn-primary">Download Form</button>
                       </div>
                     </form>
                   </div>

@@ -32,6 +32,7 @@
                     </div>
                   {% endfor %}
                   <div class="text-center">
+                    <a href="{{ url_for('forms_blueprint.submit_form', step=2) }}" class="btn btn-secondary">Previous</a>
                     {{ form.edit(class="btn btn-primary") }}
                   </div>
                 </form>

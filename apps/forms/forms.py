@@ -20,11 +20,12 @@ class CreateForm(FlaskForm):
     submit = SubmitField('Next')
     
 class TableForm(FlaskForm):
-    item_no = StringField('Item No', validators=[DataRequired()])
+    item_no = IntegerField('Item No', validators=[DataRequired()])
     description = TextAreaField('Description', validators=[DataRequired()], render_kw={'rows': 5, 'maxlength': 2048})
     quantity = IntegerField('Quantity', validators=[DataRequired(), NumberRange(min=1)])
     unit = StringField('Unit', validators=[DataRequired()])
     unit_price = FloatField('Unit Price', validators=[DataRequired(), NumberRange(min=0.01)])
     submit = SubmitField('Add Item')
     edit = SubmitField('Edit Item')
+
     

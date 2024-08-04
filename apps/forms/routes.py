@@ -47,17 +47,15 @@ def submit_form(step):
         flash('Invalid step. Redirecting to the first step.', 'warning')
         return redirect(url_for('forms_blueprint.submit_form', step=1))
     
-    # Check if a form_id is provided
     form_id = request.args.get('form_id')
     if form_id:
         existing_form = Forms.query.get(form_id)
         if existing_form and existing_form.user_id == current_user.id:
             form_data = existing_form.__dict__.copy()
-            # Remove any non-serializable attributes
             form_data.pop('_sa_instance_state', None)
             session['form_data'] = form_data
             session.modified = True
-            
+
     if request.method == 'POST':
         if step == 1:
             if form.validate_on_submit():
@@ -65,15 +63,13 @@ def submit_form(step):
                 session['form_data'].update(form_data)
                 session.modified = True
 
-                # Save the form data to the database
                 form_data = session['form_data'].copy()
-                form_data.pop('user_id', None)  # Remove user_id if it exists to not create errors
+                form_data.pop('user_id', None)
                 new_form = Forms(user_id=current_user.id, **form_data)
                 if not new_form.id:
                     db.session.add(new_form)
                     db.session.commit()
 
-                # Save the form ID in the session
                 session['form_data']['id'] = new_form.id
                 session.modified = True
 
@@ -81,9 +77,10 @@ def submit_form(step):
             
         elif step == 2:
             if table_form.validate_on_submit():
+                item_no = "{:03d}".format(table_form.item_no.data)
                 new_entry = TableEntry(
                     form_id=session['form_data']['id'],
-                    item_no=table_form.item_no.data,
+                    item_no=item_no,
                     description=table_form.description.data,
                     quantity=table_form.quantity.data,
                     unit=table_form.unit.data,
@@ -94,7 +91,7 @@ def submit_form(step):
                 flash('Table entry added successfully.', 'success')
                 return redirect(url_for('forms_blueprint.submit_form', step=2))
             else:
-                return redirect(url_for('forms_blueprint.submit_form', step=3))
+                flash('Error in form submission.', 'danger')
 
         elif step == 3:
             form_id = session['form_data']['id']
@@ -108,100 +105,9 @@ def submit_form(step):
                 flash('Error: Form not found or you do not have permission to edit it.', 'error')
                 return redirect(url_for('forms_blueprint.submit_form', step=1))
 
-            document = Document()
-            heading = document.add_paragraph()
-            heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            run = heading.add_run('Solicitation Number and Title')
-            run.font.name = 'Arial'
-            run.bold = True
-            run.font.size = Pt(18)
-
-            document.add_paragraph("\n")
-
-            solicitation_number = document.add_paragraph()
-            solicitation_number.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            solicitation_number_run = solicitation_number.add_run(str(session['form_data'].get('solicitation_number')))
-            solicitation_number_run.bold = True
-            solicitation_number_run.font.name = 'Arial'
-            solicitation_number_run.font.size = Pt(16)
-
-            document.add_paragraph("\n\n")
-
-            title = document.add_paragraph()
-            title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            title_run = title.add_run(str(session['form_data'].get('title')))
-            title_run.bold = True
-            title_run.font.name = 'Arial'
-            title_run.font.size = Pt(16)
-
-            def add_bold_paragraph(text):
-                paragraph = document.add_paragraph()
-                paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                run = paragraph.add_run(text)
-                run.bold = True
-                run.font.name = 'Arial'
-                run.font.size = Pt(11)
-                return paragraph
-
-            def add_normal_text(paragraph, text):
-                run = paragraph.add_run(text)
-                run.font.name = 'Arial'
-                run.font.size = Pt(11)
-
-            document.add_paragraph("\n\n\n\n\n\n\n\n\n")
-
-            paragraph = add_bold_paragraph("Unique Entity ID: ")
-            add_normal_text(paragraph, str(session['form_data'].get('unique_entity_id')))
-
-            paragraph = add_bold_paragraph("Phone Number: ")
-            add_normal_text(paragraph, str(session['form_data'].get('phone_number')))
-
-            paragraph = add_bold_paragraph("POC Email: ")
-            add_normal_text(paragraph, str(session['form_data'].get('poc_email')))
-
-            paragraph = add_bold_paragraph("CAGE Code: ")
-            add_normal_text(paragraph, str(session['form_data'].get('cage_code')))
-
-            paragraph = add_bold_paragraph("EIN/GST-HST Number: ")
-            add_normal_text(paragraph, str(session['form_data'].get('ein_gst_hst_number')))
-
-            paragraph = add_bold_paragraph("POC: ")
-            add_normal_text(paragraph, str(session['form_data'].get('poc')))
-
-            document.add_page_break()
-
-            table_entries = TableEntry.query.filter_by(form_id=form_id).all()
-
-            if table_entries:
-                table = document.add_table(rows=len(table_entries) + 1, cols=6)
-                table.style = 'Table Grid'
-                header = table.rows[0].cells
-                header[0].text = 'Item No'
-                header[1].text = 'Description'
-                header[2].text = 'Quantity'
-                header[3].text = 'Unit'
-                header[4].text = 'Unit Price'
-                header[5].text = 'Ext Price'
-
-                for i, entry in enumerate(table_entries, start=1):
-                    row = table.rows[i].cells
-                    row[0].text = str(entry.item_no)
-                    row[1].text = entry.description
-                    row[2].text = str(entry.quantity)
-                    row[3].text = entry.unit
-                    row[4].text = f"${entry.unit_price:.2f}"
-                    row[5].text = f"${entry.quantity * entry.unit_price:.2f}"
-            else:
-                document.add_paragraph("No table entries found.")
-
-            byte_io = BytesIO()
-            document.save(byte_io)
-            byte_io.seek(0)
-
             session.pop('form_data', None)
-
-            flash('Form submitted successfully! Your document is ready for download.', 'success')
-            return send_file(byte_io, as_attachment=True, download_name='Completed_Proposal_Notice.docx', mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+            flash('Form submitted successfully! Preparing your document.', 'success')
+            return redirect(url_for('forms_blueprint.download_form', form_id=form_id))
 
     if step == 1:
         for field in form:
@@ -233,23 +139,15 @@ def delete_form(form_id):
     return redirect(url_for('forms_blueprint.view_forms'))
 
 # Table entry
-@blueprint.route('/delete_entry/<int:entry_id>', methods=['GET', 'POST'])
-def delete_entry(entry_id):
-    entry = TableEntry.query.get_or_404(entry_id)
-    db.session.delete(entry)
-    db.session.commit()
-    flash('Entry deleted successfully.', 'success')
-    return redirect(url_for('forms_blueprint.submit_form', step=2))
-
 @blueprint.route('/edit_entry/<int:entry_id>', methods=['GET', 'POST'])
-
 @login_required
 def edit_entry(entry_id):
     entry = TableEntry.query.get_or_404(entry_id)
     form = TableForm(obj=entry)
 
     if form.validate_on_submit():
-        entry.item_no = form.item_no.data
+        item_no = "{:03d}".format(form.item_no.data)
+        entry.item_no = item_no
         entry.description = form.description.data
         entry.quantity = form.quantity.data
         entry.unit = form.unit.data
@@ -259,6 +157,116 @@ def edit_entry(entry_id):
         return redirect(url_for('forms_blueprint.submit_form', step=2))
 
     return render_template('forms/edit_entry.html', form=form, entry=entry)
+
+@blueprint.route('/delete_entry/<int:entry_id>', methods=['GET', 'POST'])
+def delete_entry(entry_id):
+    entry = TableEntry.query.get_or_404(entry_id)
+    db.session.delete(entry)
+    db.session.commit()
+    flash('Entry deleted successfully.', 'success')
+    return redirect(url_for('forms_blueprint.submit_form', step=2))
+
+# Word document generation
+@blueprint.route('/download_form/<int:form_id>', methods=['GET'])
+@login_required
+def download_form(form_id):
+    form = Forms.query.get(form_id)
+    if form and form.user_id == current_user.id:
+        # Generate the document
+        document = Document()
+        heading = document.add_paragraph()
+        heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = heading.add_run('Solicitation Number and Title')
+        run.font.name = 'Arial'
+        run.bold = True
+        run.font.size = Pt(18)
+
+        document.add_paragraph("\n")
+
+        solicitation_number = document.add_paragraph()
+        solicitation_number.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        solicitation_number_run = solicitation_number.add_run(str(form.solicitation_number))
+        solicitation_number_run.bold = True
+        solicitation_number_run.font.name = 'Arial'
+        solicitation_number_run.font.size = Pt(16)
+
+        document.add_paragraph("\n\n")
+
+        title = document.add_paragraph()
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        title_run = title.add_run(str(form.title))
+        title_run.bold = True
+        title_run.font.name = 'Arial'
+        title_run.font.size = Pt(16)
+
+        def add_bold_paragraph(text):
+            paragraph = document.add_paragraph()
+            paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = paragraph.add_run(text)
+            run.bold = True
+            run.font.name = 'Arial'
+            run.font.size = Pt(11)
+            return paragraph
+
+        def add_normal_text(paragraph, text):
+            run = paragraph.add_run(text)
+            run.font.name = 'Arial'
+            run.font.size = Pt(11)
+
+        document.add_paragraph("\n\n\n\n\n\n\n\n\n")
+
+        paragraph = add_bold_paragraph("Unique Entity ID: ")
+        add_normal_text(paragraph, str(form.unique_entity_id))
+
+        paragraph = add_bold_paragraph("Phone Number: ")
+        add_normal_text(paragraph, str(form.phone_number))
+
+        paragraph = add_bold_paragraph("POC Email: ")
+        add_normal_text(paragraph, str(form.poc_email))
+
+        paragraph = add_bold_paragraph("CAGE Code: ")
+        add_normal_text(paragraph, str(form.cage_code))
+
+        paragraph = add_bold_paragraph("EIN/GST-HST Number: ")
+        add_normal_text(paragraph, str(form.ein_gst_hst_number))
+
+        paragraph = add_bold_paragraph("POC: ")
+        add_normal_text(paragraph, str(form.poc))
+
+        document.add_page_break()
+
+        table_entries = TableEntry.query.filter_by(form_id=form_id).all()
+
+        if table_entries:
+            table = document.add_table(rows=len(table_entries) + 1, cols=6)
+            table.style = 'Table Grid'
+            header = table.rows[0].cells
+            header[0].text = 'Item No'
+            header[1].text = 'Description'
+            header[2].text = 'Quantity'
+            header[3].text = 'Unit'
+            header[4].text = 'Unit Price'
+            header[5].text = 'Ext Price'
+
+            for i, entry in enumerate(table_entries, start=1):
+                row = table.rows[i].cells
+                row[0].text = str(entry.item_no)
+                row[1].text = entry.description
+                row[2].text = str(entry.quantity)
+                row[3].text = entry.unit
+                row[4].text = f"${entry.unit_price:.2f}"
+                row[5].text = f"${entry.quantity * entry.unit_price:.2f}"
+        else:
+            document.add_paragraph("No table entries found.")
+
+        byte_io = BytesIO()
+        document.save(byte_io)
+        byte_io.seek(0)
+
+        return send_file(byte_io, as_attachment=True, download_name='Completed_Proposal_Notice.docx', mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    
+    flash('Form not found or you do not have permission to download it.', 'error')
+    return redirect(url_for('forms_blueprint.view_forms'))
 
 # Errors
 
