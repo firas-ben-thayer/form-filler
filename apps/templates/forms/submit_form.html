@@ -1,0 +1,133 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Submit Form - Step {{ current_step }}/{{ total_steps }} {% endblock title %}
+
+{% block content %}
+
+<main class="main-content mt-0">
+  <section>
+    <div class="page-header min-vh-100">
+      <div class="container">
+        {% if current_step > 1 %}
+          <a href="{{ url_for('forms_blueprint.view_forms') }}" class="btn btn-secondary">Back To View Forms</a>
+        {% endif %}
+        <div class="row">
+          <div class="col-xl-12 col-lg-12 col-md-12 d-flex flex-column mx-lg-0 mx-auto">
+            <div class="card card-plain">
+              <div class="card-header pb-0 text-start">
+                <h4 class="font-weight-bolder">Submit Form - Step {{ current_step }}/{{ total_steps }}</h4>
+                <p class="mb-0">Please complete the following section</p>
+              </div>
+              <div class="card-body">
+                <div class="progress mb-3">
+                  <div class="progress-bar" role="progressbar" style="width: {{ (current_step / total_steps) * 100 }}%;" aria-valuenow="{{ current_step }}" aria-valuemin="0" aria-valuemax="{{ total_steps }}"></div>
+                </div>
+                
+                {% if current_step == 1 %}
+                  <form method="post" action="{{ url_for('forms_blueprint.submit_form', step=current_step) }}">
+                    {{ form.hidden_tag() }}
+                    {% for field in form if field.name != 'csrf_token' and field.name != 'submit' and field.name != 'edit' %}
+                      <div class="mb-3">
+                        {{ field.label(class="form-label") }}
+                        {% if field.type == 'BooleanField' %}
+                          {{ field(class="form-check-input") }}
+                        {% elif field.type == 'SelectField' %}
+                          {{ field(class="form-select") }}
+                        {% else %}
+                          {{ field(class="form-control") }}
+                        {% endif %}
+                        {% for error in field.errors %}
+                          <span class="text-danger">{{ error }}</span>
+                        {% endfor %}
+                      </div>
+                    {% endfor %}
+                    <div class="text-center">
+                      <a href="{{ url_for('forms_blueprint.view_forms') }}" class="btn btn-secondary">Previous</a>
+                      {{ form.submit(class="btn btn-primary") }}
+                    </div>
+                  </form>
+                {% elif current_step == 2 %}
+                  <h5>Current Table Entries</h5>
+                  <table class="table">
+                    <thead>
+                      <tr>
+                        <th>Item No</th>
+                        <th>Description</th>
+                        <th>Quantity</th>
+                        <th>Unit</th>
+                        <th>Unit Price</th>
+                        <th>Ext Price</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for entry in table_entries %}
+                        <tr>
+                          <td>{{ entry.item_no }}</td>
+                          <td>{{ entry.description }}</td>
+                          <td>{{ entry.quantity }}</td>
+                          <td>{{ entry.unit }}</td>
+                          <td>${{ "%.2f"|format(entry.unit_price) }}</td>
+                          <td>${{ "%.2f"|format(entry.ext_price) }}</td>
+                          <td>
+                            <a href="{{ url_for('forms_blueprint.edit_entry', entry_id=entry.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                            <a href="{{ url_for('forms_blueprint.delete_entry', entry_id=entry.id) }}" class="btn btn-sm btn-danger">Delete</a>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                  
+                  <form method="post" action="{{ url_for('forms_blueprint.submit_form', step=current_step) }}">
+                      {{ table_form.hidden_tag() }}
+                      <div class="card-header pb-0 d-flex justify-content-between">
+                        <h5>Add New Entry</h5>
+                        {{ table_form.submit(class="btn btn-primary") }}
+                      </div>
+                      <div class="row">
+                          {% for field in table_form if field.name != 'csrf_token' and field.name != 'submit' and field.name != 'edit'%}
+                              <div class="col-md-2 mb-3">
+                                  {{ field.label(class="form-label") }}
+                                  {% if field.name == 'unit_price' %}
+                                      {{ field(class="form-control", type="number", step="0.01") }}
+                                  {% else %}
+                                      {{ field(class="form-control") }}
+                                  {% endif %}
+                                  {% for error in field.errors %}
+                                      <span class="text-danger">{{ error }}</span>
+                                  {% endfor %}
+                              </div>
+                          {% endfor %}
+                      </div>
+                  </form>
+                {% elif current_step == 3 %}
+                  <h5>Final Review</h5>
+                  <p>Please review your information and submit the form.</p>
+                  <div>
+                    <a href="{{ url_for('forms_blueprint.submit_form', step=current_step-1) }}" class="btn btn-secondary">Previous</a>
+                    <form method="post" action="{{ url_for('forms_blueprint.submit_form', step=current_step) }}">
+                      {{ form.hidden_tag() }}
+                      <div class="text-center">
+                        <button type="submit" class="btn btn-primary">Submit Form</button>
+                      </div>
+                    </form>
+                  </div>
+                {% endif %}
+                
+                <div class="text-center mt-3">
+                  {% if current_step == 2 %}
+                    <a href="{{ url_for('forms_blueprint.submit_form', step=current_step-1) }}" class="btn btn-secondary">Previous</a>
+                  {% endif %}                  
+                  {% if current_step == 2 %}
+                    <a href="{{ url_for('forms_blueprint.submit_form', step=current_step+1) }}" class="btn btn-primary">Next</a>
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+{% endblock content %}
