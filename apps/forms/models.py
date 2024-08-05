@@ -21,6 +21,8 @@ class Forms(db.Model):
     cage_code = db.Column(db.String(20))
     ein_gst_hst_number = db.Column(db.String(20))
     poc = db.Column(db.String(64))
+    technical_approach_documentation = db.Column(db.Text)
+    past_performance = db.Column(db.Text)
 
     user = db.relationship('Users', backref=db.backref('forms', lazy=True))
 

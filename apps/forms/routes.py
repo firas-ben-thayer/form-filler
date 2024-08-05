@@ -13,6 +13,7 @@ from apps.forms import blueprint
 from apps.forms.forms import CreateForm, TableForm
 from apps.forms.models import Forms, TableEntry
 from flask_login import current_user, login_required
+from htmldocx import HtmlToDocx
 
 
 @blueprint.route('/view_forms')
@@ -37,8 +38,7 @@ def edit_form(form_id, step):
 def submit_form(step):
     form = CreateForm()
     table_form = TableForm()
-
-    total_steps = 3
+    total_steps = 5
 
     if 'form_data' not in session:
         session['form_data'] = {}
@@ -46,7 +46,7 @@ def submit_form(step):
     if step < 1 or step > total_steps:
         flash('Invalid step. Redirecting to the first step.', 'warning')
         return redirect(url_for('forms_blueprint.submit_form', step=1))
-    
+
     form_id = request.args.get('form_id')
     if form_id:
         existing_form = Forms.query.get(form_id)
@@ -59,19 +59,33 @@ def submit_form(step):
     if request.method == 'POST':
         if step == 1:
             if form.validate_on_submit():
-                form_data = {field.name: field.data for field in form if field.name not in ('csrf_token', 'submit')}
+                form_data = {field.name: field.data for field in form if field.name not in ('csrf_token', 'submit', 'technical_approach_documentation', 'past_performance')}
                 session['form_data'].update(form_data)
                 session.modified = True
 
-                form_data = session['form_data'].copy()
-                form_data.pop('user_id', None)
-                new_form = Forms(user_id=current_user.id, **form_data)
-                if not new_form.id:
+                form_id = session['form_data'].get('id')
+                if form_id:
+                    existing_form = Forms.query.get(form_id)
+                    if existing_form and existing_form.user_id == current_user.id:
+                        for key, value in form_data.items():
+                            setattr(existing_form, key, value)
+                    else:
+                        flash('Error: Form not found or you do not have permission to edit it.', 'error')
+                        return redirect(url_for('forms_blueprint.submit_form', step=1))
+                else:
+                    new_form = Forms(user_id=current_user.id, **form_data)
                     db.session.add(new_form)
-                    db.session.commit()
 
-                session['form_data']['id'] = new_form.id
-                session.modified = True
+                try:
+                    db.session.commit()
+                    if not form_id:
+                        session['form_data']['id'] = new_form.id
+                    session.modified = True
+                    flash('Form data saved successfully.', 'success')
+                except Exception as e:
+                    db.session.rollback()
+                    flash(f'Error saving form data: {str(e)}', 'error')
+                    return redirect(url_for('forms_blueprint.submit_form', step=1))
 
                 return redirect(url_for('forms_blueprint.submit_form', step=2))
             
@@ -94,20 +108,45 @@ def submit_form(step):
                 flash('Error in form submission.', 'danger')
 
         elif step == 3:
-            form_id = session['form_data']['id']
-            existing_form = Forms.query.get(form_id)
-            if existing_form and existing_form.user_id == current_user.id:
-                for field_name, field_value in session['form_data'].items():
-                    if hasattr(existing_form, field_name):
-                        setattr(existing_form, field_name, field_value)
-                db.session.commit()
+            form_id = session['form_data'].get('id')
+            if form_id:
+                existing_form = Forms.query.get(form_id)
+                if existing_form and existing_form.user_id == current_user.id:
+                    existing_form.technical_approach_documentation = form.technical_approach_documentation.data
+                    db.session.commit()
+                    flash('Technical Approach Documentation saved successfully.', 'success')
+                    return redirect(url_for('forms_blueprint.submit_form', step=4))
+                else:
+                    flash('Error: Form not found or you do not have permission to edit it.', 'error')
+                    return redirect(url_for('forms_blueprint.submit_form', step=1))
             else:
-                flash('Error: Form not found or you do not have permission to edit it.', 'error')
+                flash('Form ID not found in session.', 'error')
                 return redirect(url_for('forms_blueprint.submit_form', step=1))
 
-            session.pop('form_data', None)
-            flash('Form submitted successfully! Preparing your document.', 'success')
-            return redirect(url_for('forms_blueprint.download_form', form_id=form_id))
+        elif step == 4:
+            form_id = session['form_data'].get('id')
+            if form_id:
+                existing_form = Forms.query.get(form_id)
+                if existing_form and existing_form.user_id == current_user.id:
+                    existing_form.past_performance = form.past_performance.data
+                    db.session.commit()
+                    flash('Past Performance saved successfully.', 'success')
+                    return redirect(url_for('forms_blueprint.submit_form', step=5))
+                else:
+                    flash('Error: Form not found or you do not have permission to edit it.', 'error')
+                    return redirect(url_for('forms_blueprint.submit_form', step=1))
+            else:
+                flash('Form ID not found in session.', 'error')
+                return redirect(url_for('forms_blueprint.submit_form', step=1))
+
+        elif step == 5:
+            form_id = session['form_data'].get('id')
+            if form_id:
+                flash('Form submitted successfully! Preparing your document.', 'success')
+                return redirect(url_for('forms_blueprint.download_form', form_id=form_id))
+            else:
+                flash('Form ID not found in session.', 'error')
+                return redirect(url_for('forms_blueprint.submit_form', step=1))
 
     if step == 1:
         for field in form:
@@ -122,6 +161,20 @@ def submit_form(step):
         for field in table_form:
             if field.name in session.get('form_data', {}):
                 field.data = session['form_data'][field.name]
+
+    if step == 3:
+        form_id = session['form_data'].get('id')
+        if form_id:
+            existing_form = Forms.query.get(form_id)
+            if existing_form and existing_form.user_id == current_user.id:
+                form.technical_approach_documentation.data = existing_form.technical_approach_documentation
+
+    if step == 4:
+        form_id = session['form_data'].get('id')
+        if form_id:
+            existing_form = Forms.query.get(form_id)
+            if existing_form and existing_form.user_id == current_user.id:
+                form.past_performance.data = existing_form.past_performance
 
     return render_template('forms/submit_form.html', form=form, table_form=table_form, table_entries=table_entries, current_step=step, total_steps=total_steps)
 
@@ -174,6 +227,7 @@ def download_form(form_id):
     if form and form.user_id == current_user.id:
         # Generate the document
         document = Document()
+        new_parser = HtmlToDocx()
         heading = document.add_paragraph()
         heading.alignment = WD_ALIGN_PARAGRAPH.CENTER
         run = heading.add_run('Solicitation Number and Title')
@@ -258,6 +312,39 @@ def download_form(form_id):
                 row[5].text = f"${entry.quantity * entry.unit_price:.2f}"
         else:
             document.add_paragraph("No table entries found.")
+
+        document.add_page_break()
+
+        # Add Technical Approach Documentation
+        
+        technical_title = document.add_paragraph()
+        technical_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        technical_title_run = technical_title.add_run('Technical Documentation')
+        technical_title_run.bold = True
+        technical_title_run.underline = True
+        technical_title_run.font.name = 'Arial'
+        technical_title_run.font.size = Pt(11)
+        
+        if form.technical_approach_documentation:
+            new_parser.add_html_to_document(form.technical_approach_documentation, document)
+        else:
+            document.add_paragraph("No technical approach documentation provided.")
+
+        document.add_page_break()
+
+        # Add Past Performance
+        past_title = document.add_paragraph()
+        past_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        past_title_run = past_title.add_run('Past Performance')
+        past_title_run.bold = True
+        past_title_run.underline = True
+        past_title_run.font.name = 'Arial'
+        past_title_run.font.size = Pt(11)
+        
+        if form.past_performance:
+            new_parser.add_html_to_document(form.past_performance, document)
+        else:
+            document.add_paragraph("No past performance information provided.")
 
         byte_io = BytesIO()
         document.save(byte_io)

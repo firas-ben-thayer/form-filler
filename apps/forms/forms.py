@@ -5,7 +5,8 @@ Copyright (c) 2019 - present AppSeed.us
 
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, IntegerField, FloatField, SubmitField, TextAreaField
-from wtforms.validators import DataRequired, NumberRange, Email
+from wtforms.validators import DataRequired, NumberRange, Email, Optional
+from flask_ckeditor import CKEditorField
 
 class CreateForm(FlaskForm):    
     solicitation_number = StringField('Solicitation Number', validators=[DataRequired()])
@@ -17,7 +18,9 @@ class CreateForm(FlaskForm):
     cage_code = StringField('CAGE Code', validators=[DataRequired()])
     ein_gst_hst_number = StringField('EIN/GST-HST Number', validators=[DataRequired()])
     poc = StringField('POC', validators=[DataRequired()])
-    submit = SubmitField('Next')
+    technical_approach_documentation = CKEditorField('Technical Approach Documentation', validators=[Optional()])
+    past_performance = CKEditorField('Past Performance', validators=[Optional()])
+    submit = SubmitField('Save and Continue')
     
 class TableForm(FlaskForm):
     item_no = IntegerField('Item No', validators=[DataRequired()])
