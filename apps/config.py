@@ -53,7 +53,17 @@ class Config(object):
     if USE_SQLITE:
 
         # This will create a file in <app> FOLDER
-        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db.sqlite3') 
+        SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'db.sqlite3')
+
+    # Google OAuth2 Configuration
+    GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', None)
+    GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', None)
+    GOOGLE_DISCOVERY_URL = (
+        "https://accounts.google.com/.well-known/openid-configuration"
+    )
+    FACEBOOK_CLIENT_ID = os.getenv('FACEBOOK_CLIENT_ID', None)
+    FACEBOOK_CLIENT_SECRET = os.getenv('FACEBOOK_CLIENT_SECRET', None)
+    FACEBOOK_REDIRECT_URI = os.getenv('FACEBOOK_REDIRECT_URI', None)
     
 class ProductionConfig(Config):
     DEBUG = False

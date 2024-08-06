@@ -64,7 +64,7 @@
                       {% for entry in table_entries %}
                         <tr>
                           <td>{{ entry.item_no }}</td>
-                          <td style="word-wrap: normal; max-width: 200px; white-space: normal;">{{ entry.description }}</td>
+                          <td style="break-word; normal; max-width: 200px; white-space: normal;">{{ entry.description }}</td>
                           <td>{{ entry.quantity }}</td>
                           <td>{{ entry.unit }}</td>
                           <td>${{ "%.2f"|format(entry.unit_price) }}</td>
