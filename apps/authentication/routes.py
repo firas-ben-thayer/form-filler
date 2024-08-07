@@ -16,6 +16,7 @@ from apps.authentication.models import Users
 from apps.authentication.util import verify_pass
 import requests
 from google.oauth2 import id_token
+import oauthlib
 import google.auth.transport.requests
 from pip._vendor import cachecontrol
 from requests_oauthlib import OAuth2Session
@@ -33,44 +34,50 @@ def google_login():
     current_app.logger.debug(f"Setting state in session: {state}")
     return redirect(authorization_url)
 
+# Google Login Callback
 @blueprint.route('/callback_google')
 def callback():
-    current_app.logger.debug(f"Session data in callback: {session}")
-    
-    # Check if 'state' is in the session
-    if "state" not in session:
-        current_app.logger.error("State is missing in session!")
+    try:
+        current_app.logger.debug(f"Session data in callback: {session}")
+
+        # Check if 'state' is in the session
+        if "state" not in session:
+            current_app.logger.error("State is missing in session!")
+            return redirect(url_for('authentication_blueprint.login'))
+
+        flow = current_app.config['GOOGLE_FLOW']
+        flow.fetch_token(authorization_response=request.url)
+
+        if not session["state"] == request.args["state"]:
+            current_app.logger.error("State does not match!")
+            abort(500)  # State does not match!
+
+        credentials = flow.credentials
+        request_session = requests.session()
+        cached_session = cachecontrol.CacheControl(request_session)
+        token_request = google.auth.transport.requests.Request(session=cached_session)
+
+        id_info = id_token.verify_oauth2_token(
+            id_token=credentials._id_token,
+            request=token_request,
+            audience=current_app.config['GOOGLE_CLIENT_ID']
+        )
+
+        email = id_info.get("email")
+        user = Users.query.filter_by(email=email).first()
+        if not user:
+            # Create a new user
+            username = email.split('@')[0]  # Use the part before @ as username
+            user = Users(username=username, email=email)
+            db.session.add(user)
+            db.session.commit()
+
+        login_user(user)
+        return redirect(url_for('home_blueprint.index'))
+
+    except oauthlib.oauth2.rfc6749.errors.AccessDeniedError as e:
+        current_app.logger.error(f"Access denied: {e}")
         return redirect(url_for('authentication_blueprint.login'))
-
-    flow = current_app.config['GOOGLE_FLOW']
-    flow.fetch_token(authorization_response=request.url)
-
-    if not session["state"] == request.args["state"]:
-        current_app.logger.error("State does not match!")
-        abort(500)  # State does not match!
-
-    credentials = flow.credentials
-    request_session = requests.session()
-    cached_session = cachecontrol.CacheControl(request_session)
-    token_request = google.auth.transport.requests.Request(session=cached_session)
-    
-    id_info = id_token.verify_oauth2_token(
-        id_token=credentials._id_token,
-        request=token_request,
-        audience=current_app.config['GOOGLE_CLIENT_ID']
-    )
-
-    email = id_info.get("email")
-    user = Users.query.filter_by(email=email).first()
-    if not user:
-        # Create a new user
-        username = email.split('@')[0]  # Use the part before @ as username
-        user = Users(username=username, email=email)
-        db.session.add(user)
-        db.session.commit()
-
-    login_user(user)
-    return redirect(url_for('home_blueprint.index'))
 
 # Facebook
 @blueprint.route('/facebook-login')
@@ -82,44 +89,49 @@ def facebook_login():
     session['oauth_state'] = state
     return redirect(authorization_url)
 
+# Facebook Login Callback
 @blueprint.route('/callback_facebook')
 def callback_facebook():
-    if 'oauth_state' not in session:
-        current_app.logger.error("State is missing in session!")
+    try:
+        if 'oauth_state' not in session:
+            current_app.logger.error("State is missing in session!")
+            return redirect(url_for('authentication_blueprint.login'))
+        
+        facebook = OAuth2Session(
+            client_id=current_app.config['FACEBOOK_CLIENT_ID'],
+            state=session['oauth_state'],
+            redirect_uri=current_app.config['FACEBOOK_REDIRECT_URI']
+        )
+        
+        facebook.fetch_token(
+            'https://graph.facebook.com/v11.0/oauth/access_token',
+            client_secret=current_app.config['FACEBOOK_CLIENT_SECRET'],
+            authorization_response=request.url
+        )
+
+        # Fetch user info
+        user_info = facebook.get('https://graph.facebook.com/me?fields=id,name,email').json()
+        email = user_info.get('email')
+        if not email:
+            current_app.logger.error("Email not provided by Facebook.")
+            return redirect(url_for('authentication_blueprint.login'))
+
+        user = Users.query.filter_by(email=email).first()
+        if not user:
+            # Create a new user
+            username = email.split('@')[0]
+            user = Users(username=username, email=email)
+            db.session.add(user)
+            db.session.commit()
+
+        login_user(user)
+        return redirect(url_for('home_blueprint.index'))
+
+    except oauthlib.oauth2.rfc6749.errors.AccessDeniedError as e:
+        current_app.logger.error(f"Access denied: {e}")
         return redirect(url_for('authentication_blueprint.login'))
-    
-    facebook = OAuth2Session(
-        client_id=current_app.config['FACEBOOK_CLIENT_ID'],
-        state=session['oauth_state'],
-        redirect_uri=current_app.config['FACEBOOK_REDIRECT_URI']
-    )
-    
-    facebook.fetch_token(
-        'https://graph.facebook.com/v11.0/oauth/access_token',
-        client_secret=current_app.config['FACEBOOK_CLIENT_SECRET'],
-        authorization_response=request.url
-    )
-
-    # Fetch user info
-    user_info = facebook.get('https://graph.facebook.com/me?fields=id,name,email').json()
-    email = user_info.get('email')
-    if not email:
-        current_app.logger.error("Email not provided by Facebook.")
-        return redirect(url_for('authentication_blueprint.login'))
-
-    user = Users.query.filter_by(email=email).first()
-    if not user:
-        # Create a new user
-        username = email.split('@')[0]
-        user = Users(username=username, email=email)
-        db.session.add(user)
-        db.session.commit()
-
-    login_user(user)
-    return redirect(url_for('home_blueprint.index'))
 
 # Normal Login & Registration
-
 @blueprint.route('/login', methods=['GET', 'POST'])
 def login():
     login_form = LoginForm(request.form)
