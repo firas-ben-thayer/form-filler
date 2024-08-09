@@ -12,15 +12,17 @@ from importlib import import_module
 from flask_ckeditor import CKEditor
 from google_auth_oauthlib.flow import Flow
 from requests_oauthlib import OAuth2Session
+from flask_mail import Mail
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 ckeditor = CKEditor()
+mail = Mail()
 
 def register_extensions(app):
     db.init_app(app)
     login_manager.init_app(app)
-    login_manager.login_view = 'auth.facebook_login'  # Set the login view
+    login_manager.login_view = 'auth.facebook_login'
 
 def register_blueprints(app):
     for module_name in ('authentication', 'home', 'forms'):
@@ -71,6 +73,10 @@ def create_app(config):
         scope=['public_profile', 'email']
     )
     
+    mail.init_app(app)
+    print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
+    print(f"MAIL_PASSWORD: {app.config['MAIL_PASSWORD']}")
+    print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
     register_extensions(app)
     register_blueprints(app)
     configure_database(app)

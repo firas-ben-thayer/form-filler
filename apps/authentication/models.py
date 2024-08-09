@@ -18,6 +18,8 @@ class Users(db.Model, UserMixin):
     email = db.Column(db.String(64), unique=True)
     name = db.Column(db.String(150))
     password = db.Column(db.LargeBinary)
+    is_email_verified = db.Column(db.Boolean, default=False)
+    email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
 
     def __init__(self, **kwargs):
         for property, value in kwargs.items():
