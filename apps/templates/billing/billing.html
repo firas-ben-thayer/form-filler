@@ -1,0 +1,91 @@
+{% extends 'layouts/base.html' %}
+
+{% block title %} Billing {% endblock title %}
+
+<!-- Specific CSS goes HERE -->
+{% block stylesheets %}{% endblock stylesheets %}
+
+{% block content %}
+
+  <div class="min-height-300 bg-primary position-absolute w-100"></div>
+
+    {% include "includes/sidenav.html" %}
+
+      <main class="main-content position-relative border-radius-lg ">
+
+        {% include "includes/navigation.html" %}
+
+          <div class="container my-5">
+            <div class="row">
+                <!-- Free Plan -->
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-header">
+                            Free
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">Free Plan</h5>
+                            <p class="card-text">Basic access to our platform with limited features. Ideal for personal use or trying out our services.</p>
+                            <a href="{{ url_for('billing_blueprint.free_plan') }}" class="btn btn-primary">Choose This Plan</a>
+                        </div>
+                        <div class="card-footer text-muted">
+                            $0/month
+                        </div>
+                    </div>
+                </div>
+        
+                <!-- $20 Plan -->
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-header">
+                            Silver
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">$20 Plan</h5>
+                            <p class="card-text">Access to additional features including premium content and support. Ideal for individuals and small teams.</p>
+                            <a href="#" id="buy_20_btn" class="btn btn-primary">Choose This Plan</a>
+                        </div>
+                        <div class="card-footer text-muted">
+                            $20/month
+                        </div>
+                    </div>
+                </div>
+        
+                <!-- $50 Plan -->
+                <div class="col-md-4">
+                    <div class="card text-center">
+                        <div class="card-header">
+                            Gold
+                        </div>
+                        <div class="card-body">
+                            <h5 class="card-title">$50 Plan</h5>
+                            <p class="card-text">Full access to all features including advanced tools, priority support, and enterprise-level services.</p>
+                            <a href="#" id="buy_50_btn" class="btn btn-primary">Choose This Plan</a>
+                        </div>
+                        <div class="card-footer text-muted">
+                            $50/month
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+        
+        <!--
+        {% include "includes/footer.html" %}
+        -->
+        
+      </main> 
+  {% endblock content %}
+
+<!-- Specific JS goes HERE --> 
+{% block javascripts %}
+<script src="https://js.stripe.com/v3/"></script>
+      {#
+      <script>
+        const checkout_public_key = '{{checkout_public_key}}';
+        const checkout_session_20_id = '{{checkout_session_20_id}}';
+        const checkout_session_50_id = '{{checkout_session_50_id}}';
+      </script>
+      #}
+<script src="{{ url_for('static', filename='assets/script-ajax.js') }}"></script>
+{% endblock javascripts %}

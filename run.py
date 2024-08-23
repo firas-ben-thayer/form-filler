@@ -10,6 +10,7 @@ from sys import exit
 from apps.config import config_dict
 from apps import create_app, db
 
+
 # WARNING: Don't run with debug turned on in production!
 DEBUG = (os.getenv('DEBUG', 'False') == 'True')
 
@@ -35,6 +36,7 @@ if DEBUG:
     app.logger.info('DBMS             = ' + app_config.SQLALCHEMY_DATABASE_URI)
     app.logger.info('ASSETS_ROOT      = ' + app_config.ASSETS_ROOT)
     app.logger.info('GOOGLE_CLIENT_ID = ' + (app_config.GOOGLE_CLIENT_ID if app_config.GOOGLE_CLIENT_ID else 'Not Set'))
+    app.logger.info('FACEBOOK_CLIENT_ID = ' + (app_config.FACEBOOK_CLIENT_ID if app_config.FACEBOOK_CLIENT_ID else 'Not Set'))
 
 if __name__ == "__main__":
     app.run()

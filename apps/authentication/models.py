@@ -4,9 +4,8 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 from flask_login import UserMixin
-
+from datetime import datetime
 from apps import db, login_manager
-
 from apps.authentication.util import hash_pass
 
 class Users(db.Model, UserMixin):
@@ -18,6 +17,11 @@ class Users(db.Model, UserMixin):
     email = db.Column(db.String(64), unique=True)
     name = db.Column(db.String(150))
     password = db.Column(db.LargeBinary)
+    role = db.Column(db.String(20), nullable=False, default='user')
+    subscription_type = db.Column(db.Integer, nullable=False, default=0)
+    number_of_proposals = db.Column(db.Integer, nullable=False, default=0)
+    free_plan_used = db.Column(db.Boolean, nullable=False, default=False)
+    created_on = db.Column(db.DateTime, default=datetime.now(), nullable=False)
     is_email_verified = db.Column(db.Boolean, default=False)
     email_verification_token = db.Column(db.String(100), unique=True, nullable=True)
 
@@ -37,14 +41,35 @@ class Users(db.Model, UserMixin):
 
     def __repr__(self):
         return str(self.username)
+    
+    def reset_proposals(self):
+        if self.subscription_type == 2:  # $20 Plan
+            self.number_of_proposals = 5
+        elif self.subscription_type == 3:  # $50 Plan
+            self.number_of_proposals = 10
+        elif self.subscription_type == 1:  # Free Plan
+            # if not self.proposals_reset_date:  # Only allocate proposals once
+            self.number_of_proposals = 2
+
+        # # For paid plans, set the next reset date
+        # if self.subscription_type in [2, 3]:
+        #     self.proposals_reset_date = datetime.now() + relativedelta(months=1)
 
 @login_manager.user_loader
 def user_loader(id):
     return Users.query.filter_by(id=id).first()
-
 
 @login_manager.request_loader
 def request_loader(request):
     username = request.form.get('username')
     user = Users.query.filter_by(username=username).first()
     return user if user else None
+
+class UsedSessionId(db.Model):
+    __tablename__ = 'UsedSessionId'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    session_id = db.Column(db.String(255), unique=True)
+    
+    def __repr__(self):
+        return str(self.username)

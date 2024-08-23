@@ -73,6 +73,9 @@ class Config(object):
     MAIL_USERNAME = os.getenv('MAIL_USERNAME')
     MAIL_PASSWORD = os.getenv('MAIL_PASSWORD')
     MAIL_DEFAULT_SENDER = os.getenv('MAIL_DEFAULT_SENDER')
+    
+    STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
+    STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY')
 
     # Add this line to enable logging for Flask-Mail
     MAIL_DEBUG = True

@@ -14,27 +14,31 @@ from apps.forms.forms import CreateForm, TableForm
 from apps.forms.models import Forms, TableEntry
 from flask_login import current_user, login_required
 from htmldocx import HtmlToDocx
-
+from apps.decorators import subscription_required, proposal_charges_required
 
 @blueprint.route('/view_forms')
 @login_required
+@subscription_required
 def view_forms():
     forms = Forms.query.filter_by(user_id=current_user.id).all()
     return render_template('forms/view_forms.html', forms=forms)
 
 @blueprint.route('/new_form')
 @login_required
+@proposal_charges_required
 def new_form():
     session.pop('form_data', None)
     return redirect(url_for('forms_blueprint.submit_form', step=1))
 
 @blueprint.route('/edit_form/<int:form_id>/<int:step>', methods=['GET', 'POST'])
 @login_required
+@proposal_charges_required
 def edit_form(form_id, step):
     return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
 
 @blueprint.route('/submit_form/<int:step>', methods=['GET', 'POST'])
 @login_required
+@proposal_charges_required
 def submit_form(step):
     form = CreateForm()
     table_form = TableForm()
@@ -106,6 +110,7 @@ def submit_form(step):
                 return redirect(url_for('forms_blueprint.submit_form', step=2))
             else:
                 flash('Error in form submission.', 'danger')
+                return redirect(url_for('forms_blueprint.submit_form', step=1))
 
         elif step == 3:
             form_id = session['form_data'].get('id')
@@ -194,6 +199,7 @@ def delete_form(form_id):
 # Table entry
 @blueprint.route('/edit_entry/<int:entry_id>', methods=['GET', 'POST'])
 @login_required
+@proposal_charges_required
 def edit_entry(entry_id):
     entry = TableEntry.query.get_or_404(entry_id)
     form = TableForm(obj=entry)
@@ -222,8 +228,10 @@ def delete_entry(entry_id):
 # Word document generation
 @blueprint.route('/download_form/<int:form_id>', methods=['GET'])
 @login_required
+@proposal_charges_required
 def download_form(form_id):
     form = Forms.query.get(form_id)
+    
     if form and form.user_id == current_user.id:
         # Generate the document
         document = Document()

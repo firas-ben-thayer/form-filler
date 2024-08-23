@@ -4,16 +4,19 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 from apps.home import blueprint
-from flask import render_template, request
-from flask_login import login_required
+from flask import render_template, redirect, request, url_for
+from flask_login import login_required, current_user
 from jinja2 import TemplateNotFound
-
 
 @blueprint.route('/index')
 @login_required
 def index():
-
-    return render_template('home/index.html', segment='index')
+    if current_user.role == 'admin':
+        return render_template('home/index.html', segment='index')
+    elif current_user.subscription_type == 0:
+        return redirect(url_for('billing_blueprint.billing'))
+    else:
+        return redirect(url_for('forms_blueprint.view_forms'))
 
 
 @blueprint.route('/<template>')

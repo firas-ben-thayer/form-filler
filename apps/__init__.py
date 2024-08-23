@@ -13,6 +13,7 @@ from flask_ckeditor import CKEditor
 from google_auth_oauthlib.flow import Flow
 from requests_oauthlib import OAuth2Session
 from flask_mail import Mail
+import stripe
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -25,7 +26,7 @@ def register_extensions(app):
     login_manager.login_view = 'auth.facebook_login'
 
 def register_blueprints(app):
-    for module_name in ('authentication', 'home', 'forms'):
+    for module_name in ('authentication', 'home', 'forms', 'billing'):
         module = import_module('apps.{}.routes'.format(module_name))
         app.register_blueprint(module.blueprint)
 
@@ -73,10 +74,9 @@ def create_app(config):
         scope=['public_profile', 'email']
     )
     
+    # Stripe
+    stripe.api_key = app.config['STRIPE_SECRET_KEY']
     mail.init_app(app)
-    print(f"MAIL_USERNAME: {app.config['MAIL_USERNAME']}")
-    print(f"MAIL_PASSWORD: {app.config['MAIL_PASSWORD']}")
-    print(f"MAIL_DEFAULT_SENDER: {app.config['MAIL_DEFAULT_SENDER']}")
     register_extensions(app)
     register_blueprints(app)
     configure_database(app)

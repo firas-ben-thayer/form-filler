@@ -23,6 +23,7 @@ class Forms(db.Model):
     poc = db.Column(db.String(64))
     technical_approach_documentation = db.Column(db.Text)
     past_performance = db.Column(db.Text)
+    number_of_downloads = db.Column(db.Integer, nullable=False, default=0)
 
     user = db.relationship('Users', backref=db.backref('forms', lazy=True))
 
