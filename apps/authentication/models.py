@@ -44,12 +44,12 @@ class Users(db.Model, UserMixin):
     
     def reset_proposals(self):
         if self.subscription_type == 2:  # $20 Plan
-            self.number_of_proposals = 5
+            self.number_of_proposals += 5
         elif self.subscription_type == 3:  # $50 Plan
-            self.number_of_proposals = 10
+            self.number_of_proposals += 10
         elif self.subscription_type == 1:  # Free Plan
             # if not self.proposals_reset_date:  # Only allocate proposals once
-            self.number_of_proposals = 2
+            self.number_of_proposals += 2
 
         # # For paid plans, set the next reset date
         # if self.subscription_type in [2, 3]:

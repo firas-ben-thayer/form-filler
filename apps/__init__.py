@@ -26,7 +26,7 @@ def register_extensions(app):
     login_manager.login_view = 'auth.facebook_login'
 
 def register_blueprints(app):
-    for module_name in ('authentication', 'home', 'forms', 'billing'):
+    for module_name in ('authentication', 'home', 'forms', 'billing', 'profile'):
         module = import_module('apps.{}.routes'.format(module_name))
         app.register_blueprint(module.blueprint)
 

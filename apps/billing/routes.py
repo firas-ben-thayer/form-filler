@@ -29,7 +29,7 @@ def free_plan():
         user.subscription_type = 1
         user.reset_proposals()
         db.session.commit()
-        return redirect(url_for('billing_blueprint.success'))
+        return render_template('billing/success.html')
     else:
         return render_template('billing/free_plan_used.html')
         

@@ -14,7 +14,7 @@ from apps.forms.forms import CreateForm, TableForm
 from apps.forms.models import Forms, TableEntry
 from flask_login import current_user, login_required
 from htmldocx import HtmlToDocx
-from apps.decorators import subscription_required, proposal_charges_required
+from apps.decorators import subscription_required, proposal_charges_required, prevent_step_one_if_editing
 
 @blueprint.route('/view_forms')
 @login_required
@@ -34,11 +34,16 @@ def new_form():
 @login_required
 @proposal_charges_required
 def edit_form(form_id, step):
-    return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
+    form_in_question = Forms.query.get(form_id)
+    if form_in_question.number_of_downloads == 0:
+        return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
+    else:
+        return redirect(url_for('forms_blueprint.submit_form', step=2, form_id = form_id))
 
 @blueprint.route('/submit_form/<int:step>', methods=['GET', 'POST'])
 @login_required
 @proposal_charges_required
+@prevent_step_one_if_editing
 def submit_form(step):
     form = CreateForm()
     table_form = TableForm()
@@ -66,8 +71,8 @@ def submit_form(step):
                 form_data = {field.name: field.data for field in form if field.name not in ('csrf_token', 'submit', 'technical_approach_documentation', 'past_performance')}
                 session['form_data'].update(form_data)
                 session.modified = True
-
                 form_id = session['form_data'].get('id')
+                
                 if form_id:
                     existing_form = Forms.query.get(form_id)
                     if existing_form and existing_form.user_id == current_user.id:
@@ -89,9 +94,9 @@ def submit_form(step):
                 except Exception as e:
                     db.session.rollback()
                     flash(f'Error saving form data: {str(e)}', 'error')
-                    return redirect(url_for('forms_blueprint.submit_form', step=1))
+                    return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
 
-                return redirect(url_for('forms_blueprint.submit_form', step=2))
+                return redirect(url_for('forms_blueprint.submit_form', step=2, form_id = form_id))
             
         elif step == 2:
             if table_form.validate_on_submit():
@@ -107,10 +112,10 @@ def submit_form(step):
                 db.session.add(new_entry)
                 db.session.commit()
                 flash('Table entry added successfully.', 'success')
-                return redirect(url_for('forms_blueprint.submit_form', step=2))
+                return redirect(url_for('forms_blueprint.submit_form', step=2, form_id = form_id))
             else:
                 flash('Error in form submission.', 'danger')
-                return redirect(url_for('forms_blueprint.submit_form', step=1))
+                return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
 
         elif step == 3:
             form_id = session['form_data'].get('id')
@@ -120,13 +125,13 @@ def submit_form(step):
                     existing_form.technical_approach_documentation = form.technical_approach_documentation.data
                     db.session.commit()
                     flash('Technical Approach Documentation saved successfully.', 'success')
-                    return redirect(url_for('forms_blueprint.submit_form', step=4))
+                    return redirect(url_for('forms_blueprint.submit_form', step=4, form_id = form_id))
                 else:
                     flash('Error: Form not found or you do not have permission to edit it.', 'error')
-                    return redirect(url_for('forms_blueprint.submit_form', step=1))
+                    return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
             else:
                 flash('Form ID not found in session.', 'error')
-                return redirect(url_for('forms_blueprint.submit_form', step=1))
+                return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
 
         elif step == 4:
             form_id = session['form_data'].get('id')
@@ -136,22 +141,22 @@ def submit_form(step):
                     existing_form.past_performance = form.past_performance.data
                     db.session.commit()
                     flash('Past Performance saved successfully.', 'success')
-                    return redirect(url_for('forms_blueprint.submit_form', step=5))
+                    return redirect(url_for('forms_blueprint.submit_form', step=5, form_id = form_id))
                 else:
                     flash('Error: Form not found or you do not have permission to edit it.', 'error')
-                    return redirect(url_for('forms_blueprint.submit_form', step=1))
+                    return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
             else:
                 flash('Form ID not found in session.', 'error')
-                return redirect(url_for('forms_blueprint.submit_form', step=1))
+                return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
 
         elif step == 5:
             form_id = session['form_data'].get('id')
             if form_id:
                 flash('Form submitted successfully! Preparing your document.', 'success')
-                return redirect(url_for('forms_blueprint.download_form', form_id=form_id))
+                return redirect(url_for('forms_blueprint.download_form', form_id = form_id))
             else:
                 flash('Form ID not found in session.', 'error')
-                return redirect(url_for('forms_blueprint.submit_form', step=1))
+                return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
 
     if step == 1:
         for field in form:
@@ -233,6 +238,22 @@ def download_form(form_id):
     form = Forms.query.get(form_id)
     
     if form and form.user_id == current_user.id:
+        # Decrement the number of proposals if this is the first download
+        if form.number_of_downloads == 0:
+            if current_user.number_of_proposals > 0:
+                current_user.number_of_proposals -= 1
+            else:
+                flash('You have no remaining proposals left to download.', 'error')
+                return redirect(url_for('forms_blueprint.view_forms'))
+        
+        # Increment the download count, if it’s within the limit
+        if form.number_of_downloads < 3:
+            form.number_of_downloads += 1
+            db.session.commit()
+        else:
+            flash('You have reached the maximum number of downloads for this form.', 'error')
+            return redirect(url_for('forms_blueprint.view_forms'))
+        
         # Generate the document
         document = Document()
         new_parser = HtmlToDocx()
@@ -353,12 +374,21 @@ def download_form(form_id):
             new_parser.add_html_to_document(form.past_performance, document)
         else:
             document.add_paragraph("No past performance information provided.")
-
+            
         byte_io = BytesIO()
         document.save(byte_io)
         byte_io.seek(0)
-
-        return send_file(byte_io, as_attachment=True, download_name='Completed_Proposal_Notice.docx', mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        
+        # Send the file
+        response = send_file(
+            byte_io, 
+            as_attachment=True, 
+            download_name='Completed_Proposal_Notice.docx', 
+            mimetype='application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+        )
+        
+        # Return the response and handle redirection with JavaScript in the frontend
+        return response
     
     flash('Form not found or you do not have permission to download it.', 'error')
     return redirect(url_for('forms_blueprint.view_forms'))
