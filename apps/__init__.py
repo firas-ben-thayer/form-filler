@@ -4,7 +4,7 @@ Copyright (c) 2019 - present AppSeed.us
 """
 
 import os
-import pathlib
+from dotenv import load_dotenv
 from flask import Flask
 from flask_login import LoginManager
 from flask_sqlalchemy import SQLAlchemy
@@ -19,6 +19,7 @@ db = SQLAlchemy()
 login_manager = LoginManager()
 ckeditor = CKEditor()
 mail = Mail()
+load_dotenv()
 
 def register_extensions(app):
     db.init_app(app)
@@ -56,14 +57,36 @@ def create_app(config):
     ckeditor.init_app(app)
     app.config.from_object(config)
     
-    # Google OAuth2 configuration
-    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"  # to allow Http traffic for local dev
-    client_secrets_file = os.path.join(pathlib.Path(__file__).parent, "client_secret.json")
-    app.config['GOOGLE_FLOW'] = Flow.from_client_secrets_file(
-        client_secrets_file=client_secrets_file,
-        scopes=["https://www.googleapis.com/auth/userinfo.email", "openid"],
-        redirect_uri="http://localhost:5000/callback_google"
-    )
+    # Google Auth
+    client_id = os.getenv('GOOGLE_CLIENT_ID')
+    client_secret = os.getenv('GOOGLE_CLIENT_SECRET')
+    redirect_uri = os.getenv('GOOGLE_REDIRECT_URI')
+
+    if not all([client_id, client_secret, redirect_uri]):
+        raise ValueError("Google OAuth2 configuration values are missing!")
+
+    client_config = {
+        "web": {
+            "client_id": client_id,
+            "project_id": "your-project-id",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_secret": client_secret,
+            "redirect_uris": [redirect_uri],
+        }
+    }
+
+    try:
+        os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+        app.config['GOOGLE_FLOW'] = Flow.from_client_config(
+            client_config=client_config,
+            scopes=["https://www.googleapis.com/auth/userinfo.email", "openid"],
+            redirect_uri=redirect_uri
+        )
+    except Exception as e:
+        print(f"Error initializing Google Flow: {e}")
+        raise
     
     # Facebook OAuth2 setup
     facebook_client_id = app.config['FACEBOOK_CLIENT_ID']

@@ -57,10 +57,12 @@ class Config(object):
 
     # Google OAuth2 Configuration
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', None)
+    PROJECT_ID = os.getenv('PROJECT_ID', None)
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', None)
-    GOOGLE_DISCOVERY_URL = (
-        "https://accounts.google.com/.well-known/openid-configuration"
-    )
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/callback_google')
+    GOOGLE_AUTH_URI = os.getenv('GOOGLE_AUTH_URI', 'https://accounts.google.com/o/oauth2/auth')
+    GOOGLE_TOKEN_URI = os.getenv('GOOGLE_TOKEN_URI', 'https://oauth2.googleapis.com/token')
+    GOOGLE_AUTH_PROVIDER_CERT_URL = os.getenv('GOOGLE_AUTH_PROVIDER_CERT_URL', 'https://www.googleapis.com/oauth2/v1/certs')
     
     FACEBOOK_CLIENT_ID = os.getenv('FACEBOOK_CLIENT_ID', None)
     FACEBOOK_CLIENT_SECRET = os.getenv('FACEBOOK_CLIENT_SECRET', None)
