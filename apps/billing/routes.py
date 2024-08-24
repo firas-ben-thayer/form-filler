@@ -9,6 +9,7 @@ from flask_login import login_required, current_user
 import stripe
 from apps.authentication.models import UsedSessionId
 from apps import db
+from apps.authentication.models import Users
 
 @blueprint.route('/billing')
 @login_required
@@ -36,7 +37,21 @@ def free_plan():
 @blueprint.route('/stripe_pay')
 @login_required
 def stripe_pay():
+    user = current_user
+
+    if not user.stripe_customer_id:
+        # Create a new Stripe customer
+        customer = stripe.Customer.create(
+            email=user.email,
+            name=user.name,
+            metadata={"user_id": user.id}
+        )
+        user.stripe_customer_id = customer['id']
+        db.session.commit()
+
+    # Create checkout sessions for each plan
     session_20 = stripe.checkout.Session.create(
+        customer=user.stripe_customer_id,
         payment_method_types=['card'],
         line_items=[{
             'price': 'price_1PpsvzRs0zWjhr4tvYHKwa7Y',
@@ -46,7 +61,9 @@ def stripe_pay():
         success_url=url_for('billing_blueprint.success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url=url_for('home_blueprint.index', _external=True),
     )
+
     session_50 = stripe.checkout.Session.create(
+        customer=user.stripe_customer_id,
         payment_method_types=['card'],
         line_items=[{
             'price': 'price_1PpxdORs0zWjhr4tmvMg1XLO',
@@ -56,6 +73,7 @@ def stripe_pay():
         success_url=url_for('billing_blueprint.success', _external=True) + '?session_id={CHECKOUT_SESSION_ID}',
         cancel_url=url_for('home_blueprint.index', _external=True),
     )
+
     return {
         'checkout_session_20_id': session_20['id'],
         'checkout_session_50_id': session_50['id'],
@@ -111,41 +129,51 @@ def success():
         return render_template('home/page-403.html'), 403
 
 @blueprint.route('/stripe_webhook', methods=['POST'])
-@login_required
 def stripe_webhook():
-    print('WEBHOOK CALLED')
-
-    if request.content_length > 1024 * 1024:
-        print('REQUEST TOO BIG')
-        abort(400)
-    payload = request.get_data()
-    sig_header = request.environ.get('HTTP_STRIPE_SIGNATURE')
-    endpoint_secret = 'whsec_10816af655957f0f050822aa95560bd1f1d3d019a6b60d4eac51f1818439c3cc'
-    event = None
+    payload = request.get_data(as_text=True)
+    sig_header = request.headers.get('Stripe-Signature')
+    endpoint_secret = current_app.config['STRIPE_ENDPOINT_SECRET']
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, endpoint_secret
-        )
-        print('WEBHOOK EVENT CONSTRUCTED:', event)
-        
-    except ValueError as e:
-        # Invalid payload
-        print('INVALID PAYLOAD:', str(e))
+        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+    except ValueError:
         return jsonify({'error': 'Invalid payload'}), 400
-    
-    except stripe.error.SignatureVerificationError as e:
-        # Invalid signature
-        print('INVALID SIGNATURE:', str(e))
+    except stripe.error.SignatureVerificationError:
         return jsonify({'error': 'Invalid signature'}), 400
+
+    # Handle the event
+    if event['type'] == 'invoice.payment_succeeded':
+        invoice = event['data']['object']
+        print("Invoice object:", invoice)
+        subscription_id = invoice['subscription']
+        print("Subscription ID:", subscription_id)
         
-    # Handle the checkout.session.completed event
-    if event['type'] == 'checkout.session.completed':
-        session = event['data']['object']
-        print(session)
-        line_items = stripe.checkout.Session.list_line_items(session['id'], limit=1)
-        print(line_items['data'][0]['description'])
-    else:
-        print("User not found.")
+        if subscription_id:
+            subscription = stripe.Subscription.retrieve(subscription_id)
+            customer_id = subscription['customer']
+
+            # Find the user by their Stripe customer ID
+            user = Users.query.filter_by(stripe_customer_id=customer_id).first()
+            if user:
+                user.reset_proposals()  # Reset the proposals based on the subscription type
+                db.session.commit()
+                
+        else:
+            print("No subscription ID found in the invoice")
+
+    elif event['type'] == 'invoice.payment_failed':
+        invoice = event['data']['object']
+        subscription_id = invoice['subscription']
+        subscription = stripe.Subscription.retrieve(subscription_id)
+        customer_id = subscription['customer']
+
+        # Find the user by their Stripe customer ID
+        user = Users.query.filter_by(stripe_customer_id=customer_id).first()
+        if user:
+            # Notify user or take some action (e.g., send an email)
+            # You can also suspend the user account if needed
+            print(f"Payment failed for user {user.email}")
+
+    # Handle other relevant webhook events here
 
     return jsonify({'status': 'success'}), 200

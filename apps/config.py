@@ -76,6 +76,7 @@ class Config(object):
     
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY')
+    STRIPE_ENDPOINT_SECRET = os.environ.get('STRIPE_ENDPOINT_SECRET')
 
     # Add this line to enable logging for Flask-Mail
     MAIL_DEBUG = True

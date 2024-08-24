@@ -3,7 +3,13 @@
 {% block title %} Billing {% endblock title %}
 
 <!-- Specific CSS goes HERE -->
-{% block stylesheets %}{% endblock stylesheets %}
+{% block stylesheets %}
+<style>
+    .card {
+        min-height: 400px; /* Set the minimum height for all cards */
+    }
+</style>
+{% endblock stylesheets %}
 
 {% block content %}
 
@@ -15,17 +21,25 @@
 
         {% include "includes/navigation.html" %}
 
-          <div class="container my-5">
+        <div class="container my-5">
             <div class="row">
                 <!-- Free Plan -->
                 <div class="col-md-4">
                     <div class="card text-center">
                         <div class="card-header">
-                            Free
+                            Starter
                         </div>
                         <div class="card-body">
-                            <h5 class="card-title">Free Plan</h5>
-                            <p class="card-text">2 Proposals for free. Only once! Remember to add more once you've depleated your ressources.</p>
+                            <h5 class="card-title">Free</h5>
+                            <p class="card-text">Get started for free</p>
+                            <ul class="list-group list-group-flush">
+                              <li class="list-group-item">Create up to 5 proposals /m</li>
+                              <li class="list-group-item">Access 5 basic templates</li>
+                              <li class="list-group-item">Add your logo and colors</li>
+                              <li class="list-group-item">Viewed proposals notification</li>
+                              <li class="list-group-item">E-signatures</li>
+                              <br><br><br><br><br><br>
+                            </ul>
                             <a href="{{ url_for('billing_blueprint.free_plan') }}" class="btn btn-primary">Choose This Plan</a>
                         </div>
                         <div class="card-footer text-muted">
@@ -38,15 +52,23 @@
                 <div class="col-md-4">
                     <div class="card text-center">
                         <div class="card-header">
-                            Silver
+                            Pro
                         </div>
                         <div class="card-body">
-                            <h5 class="card-title">$20 Plan</h5>
-                            <p class="card-text">5 Proposals. Remember to add more once you've depleated your ressources.</p>
+                            <h5 class="card-title">$8</h5>
+                            <p class="card-text">Get started with Pro</p>
+                            <ul class="list-group list-group-flush">
+                              <li class="list-group-item">Create up to 15 proposals /m</li>
+                              <li class="list-group-item">Access 5 basic templates</li>
+                              <li class="list-group-item">Add your logo and colors</li>
+                              <li class="list-group-item">Viewed proposals notification</li>
+                              <li class="list-group-item">E-signatures</li>
+                              <br><br><br><br><br><br>
+                            </ul>
                             <a href="#" id="buy_20_btn" class="btn btn-primary">Choose This Plan</a>
                         </div>
                         <div class="card-footer text-muted">
-                            $20/month
+                            $8/month
                         </div>
                     </div>
                 </div>
@@ -55,21 +77,31 @@
                 <div class="col-md-4">
                     <div class="card text-center">
                         <div class="card-header">
-                            Gold
+                            Premier
                         </div>
                         <div class="card-body">
-                            <h5 class="card-title">$50 Plan</h5>
-                            <p class="card-text">10 Proposals. Remember to add more once you've depleated your ressources.</p>
+                            <h5 class="card-title">$20</h5>
+                            <p class="card-text">Get started with Premier</p>
+                            <ul class="list-group list-group-flush">
+                              <li class="list-group-item">Advanced permissions</li>
+                              <li class="list-group-item">Early access to features</li>
+                              <li class="list-group-item">Priority support</li>
+                              <li class="list-group-item">Create up to 50 proposals /m</li>
+                              <li class="list-group-item">Access 5 basic templates</li>
+                              <li class="list-group-item">Add your logo and colors</li>
+                              <li class="list-group-item">Viewed proposals notification</li>
+                              <li class="list-group-item">E-signatures</li>
+                              <br>
+                            </ul>
                             <a href="#" id="buy_50_btn" class="btn btn-primary">Choose This Plan</a>
                         </div>
                         <div class="card-footer text-muted">
-                            $50/month
+                            $20/month
                         </div>
                     </div>
                 </div>
             </div>
-          </div>
-        
+        </div>
         <!--
         {% include "includes/footer.html" %}
         -->

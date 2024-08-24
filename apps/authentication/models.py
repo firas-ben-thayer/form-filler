@@ -18,6 +18,7 @@ class Users(db.Model, UserMixin):
     name = db.Column(db.String(150))
     password = db.Column(db.LargeBinary)
     role = db.Column(db.String(20), nullable=False, default='user')
+    stripe_customer_id = db.Column(db.String(255), unique=True, nullable=True)
     subscription_type = db.Column(db.Integer, nullable=False, default=0)
     number_of_proposals = db.Column(db.Integer, nullable=False, default=0)
     free_plan_used = db.Column(db.Boolean, nullable=False, default=False)
@@ -43,13 +44,13 @@ class Users(db.Model, UserMixin):
         return str(self.username)
     
     def reset_proposals(self):
-        if self.subscription_type == 2:  # $20 Plan
-            self.number_of_proposals += 5
-        elif self.subscription_type == 3:  # $50 Plan
-            self.number_of_proposals += 10
+        if self.subscription_type == 2:  # $8 Plan
+            self.number_of_proposals = 15
+        elif self.subscription_type == 3:  # $20 Plan
+            self.number_of_proposals = 50
         elif self.subscription_type == 1:  # Free Plan
             # if not self.proposals_reset_date:  # Only allocate proposals once
-            self.number_of_proposals += 2
+            self.number_of_proposals = 5
 
         # # For paid plans, set the next reset date
         # if self.subscription_type in [2, 3]:
