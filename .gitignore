@@ -13,7 +13,9 @@ __pycache__/
 
 # venv
 env
+.env
 venv
+.venv
 
 # other
 .DS_Store
@@ -31,5 +33,5 @@ apps/static/assets/node_modules
 apps/static/assets/yarn.lock
 apps/static/assets/.temp
 
-# Google:
-client_secret.json
+# Secrets:
+.env
