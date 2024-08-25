@@ -54,6 +54,15 @@
                   </form>
                 {% elif current_step == 2 %}
                   <h5>Current Table Entries</h5>
+                  
+                  <!-- Example Button -->
+                  <button class="btn btn-info mb-3" type="button" id="toggle-example">See example</button>
+
+                  <!-- Example Section -->
+                  <div id="example-section" class="collapse">
+                    <img src="{{ url_for('static', filename='assets/img/step_2.png') }}" alt="Example" class="img-fluid">
+                  </div>
+
                   <table class="table" style="table-layout: fixed;">
                     <thead>
                       <tr>
@@ -163,3 +172,19 @@
   </section>
 </main>
 {% endblock content %}
+{% block javascripts %}
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      var toggleButton = document.getElementById('toggle-example');
+      var exampleSection = document.getElementById('example-section');
+      
+      toggleButton.addEventListener('click', function () {
+        if (exampleSection.classList.contains('collapse')) {
+          exampleSection.classList.remove('collapse');
+        } else {
+          exampleSection.classList.add('collapse');
+        }
+      });
+    });
+  </script>
+{% endblock javascripts %}

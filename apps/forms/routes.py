@@ -15,13 +15,40 @@ from apps.forms.models import Forms, TableEntry
 from flask_login import current_user, login_required
 from htmldocx import HtmlToDocx
 from apps.decorators import subscription_required, proposal_charges_required, prevent_step_one_if_editing
+from flask_paginate import Pagination, get_page_args
 
 @blueprint.route('/view_forms')
 @login_required
 @subscription_required
 def view_forms():
-    forms = Forms.query.filter_by(user_id=current_user.id).all()
-    return render_template('forms/view_forms.html', forms=forms)
+    page, per_page, _ = get_page_args(page_parameter='page', per_page_parameter='per_page')
+    search_query = request.args.get('search', '').strip()
+    
+    query = Forms.query.filter_by(user_id=current_user.id)
+    
+    if search_query:
+        query = query.filter(
+            Forms.solicitation_number.ilike(f"%{search_query}%") |
+            Forms.title.ilike(f"%{search_query}%")
+        )
+    
+    total = query.count()
+    forms = query.paginate(page=page, per_page=per_page, error_out=False)
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render_template(
+            'forms/table_body.html',
+            forms=forms
+        )
+    else:
+        return render_template(
+            'forms/view_forms.html',
+            forms=forms,
+            page=page,
+            per_page=per_page,
+            search_query=search_query,
+            total=total
+        )
 
 @blueprint.route('/new_form')
 @login_required

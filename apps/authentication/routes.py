@@ -14,6 +14,8 @@ import requests
 from google.oauth2 import id_token
 import oauthlib
 import google.auth.transport.requests
+import time
+from google.auth.exceptions import InvalidValue
 from pip._vendor import cachecontrol
 from requests_oauthlib import OAuth2Session
 import traceback
@@ -53,11 +55,22 @@ def callback():
         cached_session = cachecontrol.CacheControl(request_session)
         token_request = google.auth.transport.requests.Request(session=cached_session)
 
-        id_info = id_token.verify_oauth2_token(
-            id_token=credentials._id_token,
-            request=token_request,
-            audience=current_app.config['GOOGLE_CLIENT_ID']
-        )
+        # Retry logic
+        retries = 3
+        for attempt in range(retries):
+            try:
+                id_info = id_token.verify_oauth2_token(
+                    id_token=credentials._id_token,
+                    request=token_request,
+                    audience=current_app.config['GOOGLE_CLIENT_ID']
+                )
+                break  # Exit loop if successful
+            except InvalidValue as e:
+                if attempt < retries - 1:  # Check if not the last attempt
+                    current_app.logger.warning(f"Retrying due to invalid token value: {e}")
+                    time.sleep(1)  # Wait before retrying
+                else:
+                    raise  # Re-raise exception if last attempt
 
         email = id_info.get("email")
         user = Users.query.filter_by(email=email).first()
@@ -73,6 +86,9 @@ def callback():
 
     except oauthlib.oauth2.rfc6749.errors.AccessDeniedError as e:
         current_app.logger.error(f"Access denied: {e}")
+        return redirect(url_for('authentication_blueprint.login'))
+    except Exception as e:
+        current_app.logger.error(f"An unexpected error occurred: {e}")
         return redirect(url_for('authentication_blueprint.login'))
 
 # Facebook Login & Callback
