@@ -30,20 +30,19 @@ def new_form():
     session.pop('form_data', None)
     return redirect(url_for('forms_blueprint.submit_form', step=1))
 
-@blueprint.route('/edit_form/<int:form_id>/<int:step>', methods=['GET', 'POST'])
+@blueprint.route('/change_form/<int:form_id>/<int:step>', methods=['GET', 'POST'])
 @login_required
 @proposal_charges_required
-def edit_form(form_id, step):
+def change_form(form_id, step):
     form_in_question = Forms.query.get(form_id)
     if form_in_question.number_of_downloads == 0:
-        return redirect(url_for('forms_blueprint.submit_form', step=1, form_id = form_id))
+        return redirect(url_for('forms_blueprint.edit_form', step=1, form_id = form_id))
     else:
-        return redirect(url_for('forms_blueprint.submit_form', step=2, form_id = form_id))
+        return redirect(url_for('forms_blueprint.edit_form', step=2, form_id = form_id))
 
 @blueprint.route('/submit_form/<int:step>', methods=['GET', 'POST'])
 @login_required
 @proposal_charges_required
-@prevent_step_one_if_editing
 def submit_form(step):
     form = CreateForm()
     table_form = TableForm()
@@ -188,6 +187,113 @@ def submit_form(step):
 
     return render_template('forms/submit_form.html', form=form, table_form=table_form, table_entries=table_entries, current_step=step, total_steps=total_steps)
 
+@blueprint.route('/edit_form/<int:step>/<int:form_id>', methods=['GET', 'POST'])
+@login_required
+@proposal_charges_required
+@prevent_step_one_if_editing
+def edit_form(step, form_id):
+    form = CreateForm()
+    table_form = TableForm()
+    total_steps = 5
+
+    # Retrieve existing form and validate user access
+    existing_form = Forms.query.get(form_id)
+    if not existing_form or existing_form.user_id != current_user.id:
+        flash('Error: Form not found or you do not have permission to edit it.', 'error')
+        return redirect(url_for('forms_blueprint.edit_form', step=1, form_id=form_id))
+
+    # Handle invalid step numbers
+    if step < 1 or step > total_steps:
+        flash('Invalid step. Redirecting to the first step.', 'warning')
+        return redirect(url_for('forms_blueprint.edit_form', step=1, form_id=form_id))
+
+    # Initialize session data
+    session['form_data'] = existing_form.__dict__.copy()
+    session['form_data'].pop('_sa_instance_state', None)
+    session.modified = True
+
+    if request.method == 'POST':
+        if step == 1:
+            # Step 1: Handle form data submission
+            if form.validate_on_submit():
+                form_data = {field.name: field.data for field in form if field.name not in ('csrf_token', 'submit', 'technical_approach_documentation', 'past_performance')}
+                session['form_data'].update(form_data)
+                session.modified = True
+                
+                # Update form with new data
+                for key, value in form_data.items():
+                    setattr(existing_form, key, value)
+                db.session.commit()
+
+                flash('Form data saved successfully.', 'success')
+                return redirect(url_for('forms_blueprint.edit_form', step=2, form_id=form_id))
+            else:
+                flash('Error in form submission.', 'danger')
+
+        elif step == 2:
+            # Step 2: Handle table entries submission
+            if table_form.validate_on_submit():
+                item_no = "{:03d}".format(table_form.item_no.data)
+                new_entry = TableEntry(
+                    form_id=form_id,
+                    item_no=item_no,
+                    description=table_form.description.data,
+                    quantity=table_form.quantity.data,
+                    unit=table_form.unit.data,
+                    unit_price=table_form.unit_price.data
+                )
+                db.session.add(new_entry)
+                db.session.commit()
+                flash('Table entry added successfully.', 'success')
+                return redirect(url_for('forms_blueprint.edit_form', step=2, form_id=form_id))
+            else:
+                flash('Error in table entry submission.', 'danger')
+
+        elif step == 3:
+            if form.technical_approach_documentation.data is not None:
+                existing_form.technical_approach_documentation = form.technical_approach_documentation.data
+                db.session.commit()
+                flash('Technical Approach Documentation saved successfully.', 'success')
+                return redirect(url_for('forms_blueprint.edit_form', step=4, form_id=form_id))
+            else:
+                flash('Error in technical approach documentation submission.', 'danger')
+
+        elif step == 4:
+            if form.past_performance.data is not None:
+                existing_form.past_performance = form.past_performance.data
+                db.session.commit()
+                flash('Past Performance saved successfully.', 'success')
+                return redirect(url_for('forms_blueprint.edit_form', step=5, form_id=form_id))
+            
+            else:
+                flash('Error in past performance submission.', 'danger')
+
+        elif step == 5:
+            # Step 5: Handle final submission
+            flash('Form submitted successfully! Preparing your document.', 'success')
+            return redirect(url_for('forms_blueprint.download_form', form_id=form_id))
+
+    # Prepopulate forms and table entries based on current step
+    if step == 1:
+        for field in form:
+            if field.name in session.get('form_data', {}):
+                field.data = session['form_data'][field.name]
+
+    table_entries = []
+    if step == 2:
+        table_entries = TableEntry.query.filter_by(form_id=form_id).all()
+        for field in table_form:
+            if field.name in session.get('form_data', {}):
+                field.data = session['form_data'][field.name]
+
+    if step == 3:
+        form.technical_approach_documentation.data = existing_form.technical_approach_documentation
+
+    if step == 4:
+        form.past_performance.data = existing_form.past_performance
+
+    return render_template('forms/edit_form.html', form=form, table_form=table_form, table_entries=table_entries, current_step=step, total_steps=total_steps, form_id=form_id)
+
 @blueprint.route('/delete_form/<int:form_id>', methods=['POST'])
 @login_required
 def delete_form(form_id):
@@ -202,10 +308,10 @@ def delete_form(form_id):
     return redirect(url_for('forms_blueprint.view_forms'))
 
 # Table entry
-@blueprint.route('/edit_entry/<int:entry_id>', methods=['GET', 'POST'])
+@blueprint.route('/edit_form/edit_entry/<int:entry_id>', methods=['GET', 'POST'])
 @login_required
 @proposal_charges_required
-def edit_entry(entry_id):
+def edit_entry_submit(entry_id):
     entry = TableEntry.query.get_or_404(entry_id)
     form = TableForm(obj=entry)
 
@@ -220,7 +326,27 @@ def edit_entry(entry_id):
         flash('Entry updated successfully.', 'success')
         return redirect(url_for('forms_blueprint.submit_form', step=2))
 
-    return render_template('forms/edit_entry.html', form=form, entry=entry)
+    return render_template('forms/edit_entry_submit.html', form=form, entry=entry)
+    
+@blueprint.route('/edit_form/edit_entry/<int:form_id>/<int:entry_id>', methods=['GET', 'POST'])
+@login_required
+@proposal_charges_required
+def edit_entry_edit(form_id, entry_id):
+    entry = TableEntry.query.get_or_404(entry_id)
+    form = TableForm(obj=entry)
+
+    if form.validate_on_submit():
+        item_no = "{:03d}".format(form.item_no.data)
+        entry.item_no = item_no
+        entry.description = form.description.data
+        entry.quantity = form.quantity.data
+        entry.unit = form.unit.data
+        entry.unit_price = form.unit_price.data
+        db.session.commit()
+        flash('Entry updated successfully.', 'success')
+        return redirect(url_for('forms_blueprint.edit_form', form_id=form_id, step=2))
+
+    return render_template('forms/edit_entry_edit.html', form=form, entry=entry, form_id=form_id)
 
 @blueprint.route('/delete_entry/<int:entry_id>', methods=['GET', 'POST'])
 def delete_entry(entry_id):

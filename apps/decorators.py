@@ -41,6 +41,6 @@ def prevent_step_one_if_editing(f):
             form = Forms.query.get(form_id)
             if form and step == 1 and form.number_of_downloads != 0:
                 flash('You cannot go back to Step 1 while editing a form.', 'warning')
-                return redirect(url_for('forms_blueprint.submit_form', step=2, form_id=form_id))
+                return redirect(url_for('forms_blueprint.edit_form', step=2, form_id=form_id))
         return f(*args, **kwargs)
     return decorated_function

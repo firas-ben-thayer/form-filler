@@ -47,7 +47,7 @@
                       <p class="text-sm font-weight-bold mb-0">{{ form.number_of_downloads }}/3</p>
                     </td>
                     <td class="align-middle">
-                      <a href="{{ url_for('forms_blueprint.edit_form', form_id=form.id, step=1) }}" class="btn btn-link text-secondary mb-0">
+                      <a href="{{ url_for('forms_blueprint.change_form', form_id=form.id, step=1) }}" class="btn btn-link text-secondary mb-0">
                         <i class="fa fa-pencil-alt text-xs"></i> Edit
                       </a>
                       <a href="{{ url_for('forms_blueprint.download_form', form_id=form.id) }}" 

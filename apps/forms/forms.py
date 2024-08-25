@@ -51,12 +51,12 @@ class CreateForm(FlaskForm):
     )
     technical_approach_documentation = CKEditorField(
         'Technical Approach Documentation',
-        render_kw={'placeholder': 'Paste Your Technical Approach Documentation Here'},
+        #render_kw={'placeholder': 'Paste Your Technical Approach Documentation Here'},
         validators=[Optional()]
     )
     past_performance = CKEditorField(
         'Past Performance',
-        render_kw={'Paste Your Past Performance Here'},
+        #render_kw={'Paste Your Past Performance Here'},
         validators=[Optional()]
     )
     submit = SubmitField('Save and Continue')
