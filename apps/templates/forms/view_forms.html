@@ -55,6 +55,9 @@
                         <p class="text-sm font-weight-bold mb-0">{{ form.number_of_downloads }}/3</p>
                       </td>
                       <td class="align-middle">
+                        <a href="{{ url_for('forms_blueprint.view_form', form_id=form.id) }}" class="btn btn-link text-secondary mb-0">
+                          <i class="fa fa-eye text-xs"></i> View
+                        </a>
                         <a href="{{ url_for('forms_blueprint.change_form', form_id=form.id, step=1) }}" class="btn btn-link text-secondary mb-0">
                           <i class="fa fa-pencil-alt text-xs"></i> Edit
                         </a>
@@ -127,35 +130,60 @@
   document.addEventListener('DOMContentLoaded', function() {
     var searchInput = document.getElementById('searchInput');
     var perPageSelect = document.getElementById('perPageSelect');
-  
-    function fetchForms(searchQuery, perPage) {
-      fetch(`{{ url_for('forms_blueprint.view_forms') }}?search=${searchQuery}&per_page=${perPage}`)
-        .then(response => response.text())
-        .then(data => {
-          var parser = new DOMParser();
-          var doc = parser.parseFromString(data, 'text/html');
-  
-          // Update table body
-          document.getElementById('formsTableBody').innerHTML = doc.getElementById('formsTableBody').innerHTML;
-  
-          // Update pagination controls
-          document.querySelector('.pagination').innerHTML = doc.querySelector('.pagination').innerHTML;
-        })
-        .catch(error => console.error('Error fetching forms:', error));
+    
+    function fetchForms(searchQuery, perPage, page = 1) {
+        var url = `{{ url_for('forms_blueprint.view_forms') }}?search=${searchQuery}&per_page=${perPage}&page=${page}`;
+        
+        // Update the browser's URL
+        history.pushState(null, '', url);
+
+        fetch(url)
+            .then(response => response.text())
+            .then(data => {
+                var parser = new DOMParser();
+                var doc = parser.parseFromString(data, 'text/html');
+
+                // Update table body
+                document.getElementById('formsTableBody').innerHTML = doc.getElementById('formsTableBody').innerHTML;
+
+                // Update pagination controls
+                document.querySelector('.pagination').innerHTML = doc.querySelector('.pagination').innerHTML;
+
+                // Re-attach event listeners to new pagination links
+                attachPaginationHandlers();
+            })
+            .catch(error => console.error('Error fetching forms:', error));
     }
-  
-    function handleUpdate() {
-      var searchQuery = searchInput.value.trim();
-      var perPage = perPageSelect.value;
-      fetchForms(searchQuery, perPage);
+
+    function handleUpdate(page = 1) {
+        var searchQuery = searchInput.value.trim();
+        var perPage = perPageSelect.value;
+        fetchForms(searchQuery, perPage, page);
     }
-  
-    // Initialize state
-    handleUpdate();
-  
-    searchInput.addEventListener('keyup', handleUpdate);
-    perPageSelect.addEventListener('change', handleUpdate);
-  });    
+
+    function attachPaginationHandlers() {
+        var paginationLinks = document.querySelectorAll('.pagination .page-link');
+        
+        paginationLinks.forEach(function(link) {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                var page = this.getAttribute('href').split('page=')[1];
+                handleUpdate(page);
+            });
+        });
+    }
+
+    // Initial fetch without resetting the pagination
+    attachPaginationHandlers();
+
+    searchInput.addEventListener('keyup', function() {
+        handleUpdate();
+    });
+
+    perPageSelect.addEventListener('change', function() {
+        handleUpdate();
+    });
+});
 </script>
 
 <script>

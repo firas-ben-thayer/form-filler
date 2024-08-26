@@ -50,6 +50,18 @@ def view_forms():
             total=total
         )
 
+@blueprint.route('/forms/view/<int:form_id>', methods=['GET'])
+@login_required
+def view_form(form_id):
+    form = Forms.query.get_or_404(form_id)
+    
+    table_entries = TableEntry.query.filter_by(form_id=form.id).all()
+
+    return render_template('forms/view_form.html', 
+                           form=form, 
+                           table_entries=table_entries)
+
+
 @blueprint.route('/new_form')
 @login_required
 @proposal_charges_required
@@ -211,6 +223,24 @@ def submit_form(step):
             existing_form = Forms.query.get(form_id)
             if existing_form and existing_form.user_id == current_user.id:
                 form.past_performance.data = existing_form.past_performance
+                
+    if step == 5:
+        form_id = session['form_data'].get('id')
+        if form_id:
+            existing_form = Forms.query.get(form_id)
+            if existing_form and existing_form.user_id == current_user.id:
+                form.solicitation_number.data = existing_form.solicitation_number
+                form.title.data = existing_form.title
+                form.company_name.data = existing_form.company_name
+                form.unique_entity_id.data = existing_form.unique_entity_id
+                form.phone_number.data = existing_form.phone_number
+                form.poc_email.data = existing_form.poc_email
+                form.cage_code.data = existing_form.cage_code
+                form.ein_gst_hst_number.data = existing_form.ein_gst_hst_number
+                form.poc.data = existing_form.poc
+                form.technical_approach_documentation.data = existing_form.technical_approach_documentation
+                form.past_performance.data = existing_form.past_performance
+                table_entries = TableEntry.query.filter_by(form_id=form_id).all()
 
     return render_template('forms/submit_form.html', form=form, table_form=table_form, table_entries=table_entries, current_step=step, total_steps=total_steps)
 
@@ -318,6 +348,24 @@ def edit_form(step, form_id):
 
     if step == 4:
         form.past_performance.data = existing_form.past_performance
+        
+    if step == 5:
+        form_id = session['form_data'].get('id')
+        if form_id:
+            existing_form = Forms.query.get(form_id)
+            if existing_form and existing_form.user_id == current_user.id:
+                form.solicitation_number.data = existing_form.solicitation_number
+                form.title.data = existing_form.title
+                form.company_name.data = existing_form.company_name
+                form.unique_entity_id.data = existing_form.unique_entity_id
+                form.phone_number.data = existing_form.phone_number
+                form.poc_email.data = existing_form.poc_email
+                form.cage_code.data = existing_form.cage_code
+                form.ein_gst_hst_number.data = existing_form.ein_gst_hst_number
+                form.poc.data = existing_form.poc
+                form.technical_approach_documentation.data = existing_form.technical_approach_documentation
+                form.past_performance.data = existing_form.past_performance
+                table_entries = TableEntry.query.filter_by(form_id=form_id).all()
 
     return render_template('forms/edit_form.html', form=form, table_form=table_form, table_entries=table_entries, current_step=step, total_steps=total_steps, form_id=form_id)
 

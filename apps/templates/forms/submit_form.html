@@ -150,19 +150,57 @@
                   </form>
                   {{ ckeditor.load() }}
                   {{ ckeditor.config(name='past_performance') }}
-                {% elif current_step == 5 %}
-                  <h5>Final Review</h5>
-                  <p>Please review your information and submit the form.</p>
-                  <div>
-                    <form method="post" action="{{ url_for('forms_blueprint.submit_form', step=current_step) }}">
-                      {{ form.hidden_tag() }}
-                      <div class="text-center">
-                        <a href="{{ url_for('forms_blueprint.submit_form', step=current_step-1, form_id=request.args.get('form_id')) }}" class="btn btn-secondary">Previous</a>
-                        <button type="submit" class="btn btn-primary">Download Form</button>
-                      </div>
-                    </form>
-                  </div>
-                {% endif %}
+                  {% elif current_step == 5 %}
+                    <h5>Final Review</h5>
+                    <p>Please review your information and submit the form.</p>
+                    <div>
+                      <h6>Solicitation Number: {{ form.solicitation_number.data }}</h6>
+                      <h6>Title: {{ form.title.data }}</h6>
+                      <h6>Company Name: {{ form.company_name.data }}</h6>
+                      <h6>Unique Entity ID: {{ form.unique_entity_id.data }}</h6>
+                      <h6>Phone Number: {{ form.phone_number.data }}</h6>
+                      <h6>POC Email: {{ form.poc_email.data }}</h6>
+                      <h6>CAGE Code: {{ form.cage_code.data }}</h6>
+                      <h6>EIN/GST/HST Number: {{ form.ein_gst_hst_number.data }}</h6>
+                      <h6>POC: {{ form.poc.data }}</h6>
+                      <h6>Table Entries:</h6>
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Item No</th>
+                            <th>Description</th>
+                            <th>Quantity</th>
+                            <th>Unit</th>
+                            <th>Unit Price</th>
+                            <th>Ext Price</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {% for entry in table_entries %}
+                            <tr>
+                              <td>{{ entry.item_no }}</td>
+                              <td>{{ entry.description }}</td>
+                              <td>{{ entry.quantity }}</td>
+                              <td>{{ entry.unit }}</td>
+                              <td>${{ "%.2f"|format(entry.unit_price) }}</td>
+                              <td>${{ "%.2f"|format(entry.ext_price) }}</td>
+                            </tr>
+                          {% endfor %}
+                        </tbody>
+                      </table>
+                      <h6>Technical Approach Documentation:</h6>
+                      <p>{{ form.technical_approach_documentation.data | safe }}</p>
+                      <h6>Past Performance:</h6>
+                      <p>{{ form.past_performance.data | safe }}</p>
+                      <form method="post" action="{{ url_for('forms_blueprint.submit_form', step=current_step) }}">
+                        {{ form.hidden_tag() }}
+                        <div class="text-center">
+                          <a href="{{ url_for('forms_blueprint.submit_form', step=current_step-1, form_id=request.args.get('form_id')) }}" class="btn btn-secondary">Previous</a>
+                          <button type="submit" class="btn btn-primary">Download Form</button>
+                        </div>
+                      </form>
+                    </div>
+                  {% endif %}
               </div>
             </div>
           </div>

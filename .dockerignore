@@ -3,3 +3,15 @@ __pycache__
 *.pyc
 *.pyo
 *.pyd
+*.venv
+*.env
+nginx
+appseed-app.conf
+.gitignore
+apps.txt
+build.sh
+CHANGELOG.md
+docker-compose.yml
+LICENSE.md
+README.md
+render.yaml

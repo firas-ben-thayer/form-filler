@@ -21,6 +21,7 @@ ckeditor = CKEditor()
 mail = Mail()
 load_dotenv()
 
+
 def register_extensions(app):
     db.init_app(app)
     login_manager.init_app(app)
@@ -32,7 +33,6 @@ def register_blueprints(app):
         app.register_blueprint(module.blueprint)
 
 def configure_database(app):
-
     @app.before_first_request
     def initialize_database():
         try:
