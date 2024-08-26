@@ -10,6 +10,7 @@ import stripe
 from apps.authentication.models import UsedSessionId
 from apps import db
 from apps.authentication.models import Users
+import os
 
 @blueprint.route('/billing')
 @login_required
@@ -50,11 +51,11 @@ def stripe_pay():
         db.session.commit()
 
     # Create checkout sessions for each plan
-    session_20 = stripe.checkout.Session.create(
+    session_8 = stripe.checkout.Session.create(
         customer=user.stripe_customer_id,
         payment_method_types=['card'],
         line_items=[{
-            'price': 'price_1PpsvzRs0zWjhr4tvYHKwa7Y',
+            'price':  os.environ.get('SESSION_8'),
             'quantity': 1,
         }],
         mode='subscription',
@@ -62,11 +63,11 @@ def stripe_pay():
         cancel_url=url_for('home_blueprint.index', _external=True),
     )
 
-    session_50 = stripe.checkout.Session.create(
+    session_20 = stripe.checkout.Session.create(
         customer=user.stripe_customer_id,
         payment_method_types=['card'],
         line_items=[{
-            'price': 'price_1PpxdORs0zWjhr4tmvMg1XLO',
+            'price':  os.environ.get('SESSION_20'),
             'quantity': 1,
         }],
         mode='subscription',
@@ -75,8 +76,8 @@ def stripe_pay():
     )
 
     return {
+        'checkout_session_8_id': session_8['id'],
         'checkout_session_20_id': session_20['id'],
-        'checkout_session_50_id': session_50['id'],
         'checkout_public_key': current_app.config['STRIPE_PUBLIC_KEY']
     }
 

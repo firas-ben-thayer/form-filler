@@ -10,7 +10,7 @@ button_20.addEventListener('click', event => {
             // Make the id field from the Checkout Session creation API response
             // available to this file, so you can provide it as parameter here
             // instead of the {{CHECKOUT_SESSION_ID}} placeholder.
-            sessionId: data.checkout_session_20_id
+            sessionId: data.checkout_session_8_id
         }).then(function (result) {
             // If `redirectToCheckout` fails due to a browser or network
             // error, display the localized error message to your customer
@@ -28,7 +28,7 @@ button_50.addEventListener('click', event => {
             // Make the id field from the Checkout Session creation API response
             // available to this file, so you can provide it as parameter here
             // instead of the {{CHECKOUT_SESSION_ID}} placeholder.
-            sessionId: data.checkout_session_50_id
+            sessionId: data.checkout_session_20_id
         }).then(function (result) {
             // If `redirectToCheckout` fails due to a browser or network
             // error, display the localized error message to your customer

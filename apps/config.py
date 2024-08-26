@@ -59,7 +59,7 @@ class Config(object):
     GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID', None)
     PROJECT_ID = os.getenv('PROJECT_ID', None)
     GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET', None)
-    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', 'http://localhost:5000/callback_google')
+    GOOGLE_REDIRECT_URI = os.getenv('GOOGLE_REDIRECT_URI', None)
     GOOGLE_AUTH_URI = os.getenv('GOOGLE_AUTH_URI', 'https://accounts.google.com/o/oauth2/auth')
     GOOGLE_TOKEN_URI = os.getenv('GOOGLE_TOKEN_URI', 'https://oauth2.googleapis.com/token')
     GOOGLE_AUTH_PROVIDER_CERT_URL = os.getenv('GOOGLE_AUTH_PROVIDER_CERT_URL', 'https://www.googleapis.com/oauth2/v1/certs')
@@ -79,6 +79,8 @@ class Config(object):
     STRIPE_SECRET_KEY = os.environ.get('STRIPE_SECRET_KEY')
     STRIPE_PUBLIC_KEY = os.environ.get('STRIPE_PUBLIC_KEY')
     STRIPE_ENDPOINT_SECRET = os.environ.get('STRIPE_ENDPOINT_SECRET')
+    SESSION_8 = os.environ.get('SESSION_8')
+    SESSION_20 = os.environ.get('SESSION_20')
 
     # Add this line to enable logging for Flask-Mail
     MAIL_DEBUG = True
